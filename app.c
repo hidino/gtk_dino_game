@@ -22,6 +22,7 @@ GdkPixbuf *dest_pixbuf;
 GtkWidget *g_image_obj;
 GtkWidget *label_km;
 GtkWidget *label_game_over;
+GtkWidget *label_restart;
 
 int dino_run=1;
 int player_x;
@@ -48,21 +49,19 @@ void css(GtkWidget *widget, const gchar *data) {
 }
 
 void game_init(){
-    
     player_x=10;
     player_y=PLAYER_NO_JUMP_Y;
     can_jump=1;
     jump_up=0;
     jump_down=0;
     jump_speed=2;
-
     obj_speed=2;
     obj_x=WIN_WIDTH;
     obj_y=WIN_HEIGHT-OBJ_HEIGHT;
-
-    game_state=1;
     run_km=0;
     gtk_widget_hide(label_game_over);
+    gtk_widget_hide(label_restart);
+    game_state=1;
 }
  
 void destroy(GtkWidget *widget,gpointer data){
@@ -106,6 +105,12 @@ gboolean km(){
     }
     return TRUE;
 }
+
+gboolean ready_to_start(){
+    game_state=0;
+    return FALSE;
+}
+
 gboolean loop(){
     //游戏中
     if(game_state==1){
@@ -133,17 +138,21 @@ gboolean loop(){
         }
         if(abs(obj_x-player_x)<(int)(PLAYER_SIZE+OBJ_WIDTH)/3){
             if(abs(obj_y-player_y)<(int)(PLAYER_SIZE+OBJ_HEIGHT)/3){
-                game_state=3;
+                //游戏结束
+                game_state=300;
+                gtk_widget_show(label_game_over);
                 play_audio_over();
             } 
         }
         gtk_fixed_move(GTK_FIXED(fixed),g_image_obj,obj_x,obj_y);
     }else if(game_state==2){//暂停
-    }else if(game_state==3){//游戏结束
+    }else if(game_state>3){
         printf("game over\n");
-        gtk_widget_show(label_game_over);
+        game_state-=1;
+    }else if(game_state==3){
+        gtk_widget_show(label_restart);
     }
-    
+    printf("state:%d\n",game_state);
     return TRUE;
 }
 
@@ -161,6 +170,8 @@ gboolean dino_run_image(){
     }
     return TRUE;
 }
+
+
 
 void dino_jump_image(){
     dino_run=0;
@@ -188,7 +199,7 @@ gboolean deal_key_press(GtkWidget *widget, GdkEventKey  *event, gpointer data)
                 dino_jump_image();
                 printf("jump\n");  
             }
-            if(game_state==3){
+            if(game_state==3){//ready to start
                 game_init(); 
             }
             break;
@@ -218,10 +229,15 @@ int main(int argc,char *argv[]){
 
     //gameover
     label_game_over = gtk_label_new_with_mnemonic ("GAME OVER");
-	gtk_widget_set_size_request(label_game_over,WIN_WIDTH,WIN_HEIGHT);
-//    gtk_misc_set_alignment(GTK_MISC(label_game_over),1,1);
+	gtk_widget_set_size_request(label_game_over,WIN_WIDTH,WIN_HEIGHT/2);
     css (label_game_over, "label{color:#222;font-size:60px}");
-    gtk_fixed_put (GTK_FIXED(fixed),label_game_over,0,0);
+    gtk_fixed_put (GTK_FIXED(fixed),label_game_over,0,(int)WIN_HEIGHT/6);
+
+    //restart
+    label_restart = gtk_label_new_with_mnemonic ("press space to restart");
+	gtk_widget_set_size_request(label_restart,WIN_WIDTH,WIN_HEIGHT/2);
+    css (label_restart, "label{color:#222;font-size:20px}");
+    gtk_fixed_put (GTK_FIXED(fixed),label_restart,0,WIN_HEIGHT/3);
 
     //player
     g_image_player = gtk_image_new ();
@@ -236,6 +252,7 @@ int main(int argc,char *argv[]){
 
     gtk_widget_show_all (window);
     gtk_widget_hide(label_game_over);
+    gtk_widget_hide(label_restart);
 //    gtk_widget_set_opacity (GTK_WIDGET (window), 0.9);
     
     game_init();
